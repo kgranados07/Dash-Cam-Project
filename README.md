@@ -42,6 +42,8 @@ server (Flask/FastAPI) is live, update `BASE_URL` in that file and swap
 the mock `fetchTickets()` for the real `fetch()` call already commented
 in there — no other code changes needed.
 
+<img width="1847" height="832" alt="image" src="https://github.com/user-attachments/assets/a85948fc-c602-41cb-ac25-cb8f5822fe21" />
+
 ## Status
 
 - [x] Week 1: Dev environment set up
