@@ -32,14 +32,35 @@ dashboard drivers would use to see what got flagged and respond to it with payin
    code, or run it in a simulator.
 
 ## Project structure
-
 ```
-App.js                    # Navigation (tabs + stack)
-TicketListScreen.js       # List of tickets, filterable by status
-TicketDetailScreen.js     # Single ticket: time, location, pay/contest
-EvidenceScreen.js         # Full-screen photo/video evidence
-Backend/                  # Detection + API logic
-Database/                 # Ticket + evidence storage
+Frontend/                       # Mobile app (React Native / Expo)
+  App.js                        # Navigation setup (tabs + stack)
+  app.json                      # Expo app settings
+  babel.config.js               # Build config for Expo
+  package.json                  # Frontend dependencies
+  screens/
+    TicketListScreen.js         # List of tickets, filterable by status (All/Unpaid/Paid/Contested)
+    TicketDetailScreen.js       # Single ticket: time, location, pay/contest
+    EvidenceScreen.js           # Full-screen photo/video evidence
+  config/
+    api.js                      # Backend address + fetchTickets() (mock data until the server is live)
+
+Backend/                        # Detection + API logic
+  AprilTagDetect/               # Reads AprilTag/QR markers from the camera (zones, speed)
+  Recorder/                     # Camera capture and loop recording
+  Server/                       # API server (Flask/FastAPI) the app talks to
+  Untitled Diagram.drawio-2.pdf # System diagram
+
+Database/                       # Ticket + evidence storage (SQLite)
+  database.js                   # tickets + zones tables; insert, query, update status
+  addingtickets.js              # incidents table, loop-recording segments, violation inserts
+  looprecording.js              # ffmpeg loop recording that logs segments to the DB
+  fixingreading.js              # QR code reading test script (jsQR + ffmpeg)
+  list-webcams.js               # Lists connected cameras
+  main.py                       # Python helper script
+  rename.js                     # File renaming helper
+
+image.png                       # Use case diagram
 ```
 
 ## Connecting to the backend
