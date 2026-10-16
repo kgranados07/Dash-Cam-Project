@@ -58,6 +58,8 @@ for a real network request, no other screens should need to change.
 - If a merge conflict shows up, resolve it manually in the flagged
   file, then `git add` + `git commit` to finish.
 
+<img width="1847" height="832" alt="image" src="https://github.com/user-attachments/assets/a85948fc-c602-41cb-ac25-cb8f5822fe21" />
+
 ## Status
 
 - [x] Dev environment set up
