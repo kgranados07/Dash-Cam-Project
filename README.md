@@ -72,7 +72,7 @@ for a real network request, no other screens should need to change.
 =======
 >>>>>>> f72d3e4cebd8eee15e5a87ac3e527d324ca40500
 
-
+```
 Dash-Cam-Project/
 ├── frontend/                  
 │   ├── App.js
@@ -93,3 +93,4 @@ Dash-Cam-Project/
 │   └── detection/             
 ├── database/                  
 │   ├── schema.sql
+```
