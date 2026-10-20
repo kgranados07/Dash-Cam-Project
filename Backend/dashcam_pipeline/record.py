@@ -6,7 +6,7 @@ import threading
 from datetime import datetime
 
 
-CAMERA = 0
+CAMERA = 2
 WIDTH = 1280
 HEIGHT = 720
 FPS = 30
@@ -26,10 +26,10 @@ def record_segments(completed_queue, stop_event, output_dir=OUTPUT_DIR,
     os.makedirs(output_dir, exist_ok=True)
 
     # CAP_DSHOW is Windows-specific; use the default backend elsewhere.
-    if os.name == "nt":
-        cap = cv2.VideoCapture(camera, cv2.CAP_DSHOW)
-    else:
-        cap = cv2.VideoCapture(camera)
+    #if os.name == "nt":
+        #cap = cv2.VideoCapture(camera, cv2.CAP_DSHOW)
+    #else:
+    cap = cv2.VideoCapture(camera, cv2.CAP_V4L2)
 
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
