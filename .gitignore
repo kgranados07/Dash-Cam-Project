@@ -1,3 +1,13 @@
 node_modules/
+<<<<<<< HEAD
+__pycache__/
+*.pyc
+.env
+.expo/
+venv/
+*.exe
+*.zip
+=======
 tempframe.jpg
 *.db
+>>>>>>> upstream/main
