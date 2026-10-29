@@ -1,128 +1,91 @@
 import cv2
-import sys
 import json
-import time
+import os
+import sys
 from datetime import timedelta
 
-if len(sys.argv) < 2:
-    print("Usage:")
-    print("python analyze.py video.mp4")
-    exit()
 
-video_file = sys.argv[1]
+def analyze_video(video_file, seen_codes=None, results_file="qr_results.json"):
+    """
+    Analyze a completed video without displaying any windows.
+    Each QR payload is recorded only once for the entire controller session
+    when the same seen_codes set is passed for each segment.
+    """
+    if seen_codes is None:
+        seen_codes = set()
 
-cap = cv2.VideoCapture(video_file)
+    cap = cv2.VideoCapture(video_file)
+    if not cap.isOpened():
+        print(f"Could not open video: {video_file}", flush=True)
+        return []
 
-if not cap.isOpened():
-    print("Could not open video")
-    exit()
+    qr = cv2.QRCodeDetector()
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if not fps or fps <= 0:
+        fps = 30.0
 
-qr = cv2.QRCodeDetector()
+    frame_number = 0
+    new_detections = []
 
-fps = cap.get(cv2.CAP_PROP_FPS)
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            frame_number += 1
+            timestamp = frame_number / fps
 
-if fps <= 0:
-    fps = 30
+            data, points, _ = qr.detectAndDecode(frame)
+            if data:
+                # Deduplicate by QR payload across all processed segments.
+                if data not in seen_codes:
+                    seen_codes.add(data)
+                    detection = {
+                        "qr_data": data,
+                        "video": os.path.basename(video_file),
+                        "frame": frame_number,
+                        "timestamp_seconds": round(timestamp, 3),
+                        "timestamp": str(timedelta(seconds=timestamp))
+                    }
+                    new_detections.append(detection)
+                    print(
+                        f"QR CODE DETECTED: {data} | "
+                        f"{os.path.basename(video_file)} | "
+                        f"frame {frame_number} | {timestamp:.2f}s",
+                        flush=True
+                    )
+    finally:
+        cap.release()
 
-frame_number = 0
+    # Append new results instead of overwriting previous segments' results.
+    existing = []
+    if os.path.exists(results_file):
+        try:
+            with open(results_file, "r", encoding="utf-8") as f:
+                existing = json.load(f)
+            if not isinstance(existing, list):
+                existing = []
+        except (json.JSONDecodeError, OSError):
+            existing = []
 
-detections = []
+    if new_detections:
+        existing.extend(new_detections)
+        temp_file = results_file + ".tmp"
+        with open(temp_file, "w", encoding="utf-8") as f:
+            json.dump(existing, f, indent=4, ensure_ascii=False)
+        os.replace(temp_file, results_file)
 
-# Prevent the same QR from being recorded repeatedly
-last_detection = {}
-COOLDOWN = 3.0
+    print(
+        f"Analysis complete: {os.path.basename(video_file)} "
+        f"({len(new_detections)} new unique QR code(s)).",
+        flush=True
+    )
+    return new_detections
 
-while True:
 
-    ret, frame = cap.read()
-
-    if not ret:
-        break
-
-    frame_number += 1
-
-    timestamp = frame_number / fps
-
-    # -------------------------
-    # QR DETECTION
-    # -------------------------
-
-    data, points, _ = qr.detectAndDecode(frame)
-
-    if data:
-
-        current_time = time.time()
-
-        previous = last_detection.get(data, -999)
-
-        if current_time - previous >= COOLDOWN:
-
-            last_detection[data] = current_time
-
-            detection = {
-                "qr_data": data,
-                "frame": frame_number,
-                "timestamp": timestamp
-            }
-
-            detections.append(detection)
-
-            print()
-            print("QR CODE DETECTED")
-            print("----------------")
-            print("Data:", data)
-            print("Frame:", frame_number)
-            print("Time:", timedelta(seconds=timestamp))
-
-    # -------------------------
-    # DISPLAY
-    # -------------------------
-
-    if points is not None:
-
-        points = points[0].astype(int)
-
-        for i in range(4):
-
-            cv2.line(
-                frame,
-                tuple(points[i]),
-                tuple(points[(i + 1) % 4]),
-                (0, 255, 0),
-                3
-            )
-
-        if data:
-
-            cv2.putText(
-                frame,
-                data,
-                (points[0][0], points[0][1] - 10),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.7,
-                (0, 255, 0),
-                2
-            )
-
-    cv2.imshow("QR Analysis", frame)
-
-    # Press Q to stop
-    if cv2.waitKey(1) & 0xFF == ord("q"):
-        break
-
-cap.release()
-cv2.destroyAllWindows()
-
-# -------------------------
-# SAVE RESULTS
-# -------------------------
-
-with open("qr_results.json", "w") as f:
-    json.dump(detections, f, indent=4)
-
-print()
-print("==========================")
-print("ANALYSIS COMPLETE")
-print("==========================")
-print(f"QR codes found: {len(detections)}")
-print("Results saved to qr_results.json")
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python analyze.py video.mp4 [results.json]")
+        raise SystemExit(2)
+    output = sys.argv[2] if len(sys.argv) > 2 else "qr_results.json"
+    analyze_video(sys.argv[1], results_file=output)

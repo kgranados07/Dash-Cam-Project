@@ -1,56 +1,94 @@
 import cv2
+import os
+import time
+import queue
+import threading
 from datetime import datetime
 
-CAMERA = 0
+
+CAMERA = 2
 WIDTH = 1280
 HEIGHT = 720
 FPS = 30
+SEGMENT_SECONDS = 30
+OUTPUT_DIR = "recordings"
 
-cap = cv2.VideoCapture(CAMERA, cv2.CAP_DSHOW)
 
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
-cap.set(cv2.CAP_PROP_FPS, FPS)
+def record_segments(completed_queue, stop_event, output_dir=OUTPUT_DIR,
+                    segment_seconds=SEGMENT_SECONDS, camera=CAMERA,
+                    width=WIDTH, height=HEIGHT, fps=FPS):
+    """
+    Record continuously into fixed-length video segments.
+    A completed filename is placed on completed_queue only after the writer
+    has been closed, so the analyzer never reads a file still being written.
+    This function intentionally creates no GUI windows.
+    """
+    os.makedirs(output_dir, exist_ok=True)
 
-if not cap.isOpened():
-    print("Could not open camera")
-    exit()
+    # CAP_DSHOW is Windows-specific; use the default backend elsewhere.
+    #if os.name == "nt":
+        #cap = cv2.VideoCapture(camera, cv2.CAP_DSHOW)
+    #else:
+    cap = cv2.VideoCapture(camera, cv2.CAP_V4L2)
 
-# Create a unique filename
-timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-filename = f"driving_{timestamp}.mp4"
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+    cap.set(cv2.CAP_PROP_FPS, fps)
 
-fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    if not cap.isOpened():
+        raise RuntimeError(f"Could not open camera {camera}")
 
-out = cv2.VideoWriter(
-    filename,
-    fourcc,
-    FPS,
-    (WIDTH, HEIGHT)
-)
+    writer = None
+    segment_start = None
+    current_path = None
+    frame_size = (width, height)
 
-print(f"Recording to {filename}")
-print("Press Q to stop.")
+    def start_segment(actual_size):
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        path = os.path.join(output_dir, f"driving_{stamp}.mp4")
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        video_writer = cv2.VideoWriter(path, fourcc, fps, actual_size)
+        if not video_writer.isOpened():
+            video_writer.release()
+            raise RuntimeError(f"Could not create video file: {path}")
+        print(f"Recording: {path}", flush=True)
+        return video_writer, path
 
-while True:
+    try:
+        while not stop_event.is_set():
+            ok, frame = cap.read()
+            if not ok:
+                print("Camera frame read failed; retrying.", flush=True)
+                time.sleep(0.1)
+                continue
 
-    ret, frame = cap.read()
+            now = time.monotonic()
+            actual_size = (frame.shape[1], frame.shape[0])
 
-    if not ret:
-        print("Could not read camera")
-        break
+            if writer is None:
+                writer, current_path = start_segment(actual_size)
+                segment_start = now
+                frame_size = actual_size
 
-    # Save frame
-    out.write(frame)
+            # If the camera changes resolution, resize to the active writer's size.
+            if actual_size != frame_size:
+                frame = cv2.resize(frame, frame_size)
 
-    # Show camera
-    cv2.imshow("Recording", frame)
+            writer.write(frame)
 
-    if cv2.waitKey(1) & 0xFF == ord("q"):
-        break
+            if now - segment_start >= segment_seconds:
+                writer.release()
+                writer = None
+                completed_queue.put(current_path)
+                print(f"Segment ready: {current_path}", flush=True)
+                current_path = None
+                segment_start = None
 
-cap.release()
-out.release()
-cv2.destroyAllWindows()
-
-print(f"Saved: {filename}")
+    finally:
+        if writer is not None:
+            writer.release()
+            # Queue the final partial segment on shutdown if it contains frames.
+            if current_path and os.path.exists(current_path) and os.path.getsize(current_path) > 0:
+                completed_queue.put(current_path)
+                print(f"Final segment ready: {current_path}", flush=True)
+        cap.release()
