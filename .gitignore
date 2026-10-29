@@ -1,3 +1,7 @@
 node_modules/
 tempframe.jpg
 *.db
+node_modules/
+tempframe.jpg
+sqlite3.exe
+*.db
