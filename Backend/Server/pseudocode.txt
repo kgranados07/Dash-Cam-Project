@@ -1,0 +1,26 @@
+-Detection - Sends Dictionary Data containing:
+
+user id
+event id
+type of event
+street location
+lat and long values
+
+-Sends to (eventController) - POST request
+
+-eventController - Recieves POST request from Detection
+--sends event data to (eventService)
+
+---data = {
+    userID: integer,
+    eventType: string,
+    streetLocation: string,
+    latitude: float,
+    longitude: float
+}
+
+function postEvent(event:Dict) -> data
+    
+
+-eventService - Does the math
+
