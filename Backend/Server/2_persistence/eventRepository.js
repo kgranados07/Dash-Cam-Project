@@ -1,12 +1,23 @@
-// Persistence layer: talks to the database and hide all SQL details from the rest of your SW
-const db = require("../3_config/db"); // imports the database connection info from db.js (next layer - 3_config)
+const db = require("../3_config/db");
 
-// SQL query to extract data from db
-exports.findById = (id) => {
-    return new Promise((resolve, reject) => { // return one record when it's ready from db
-        db.get("SELECT * FROM events WHERE id = ?", [id], (err, row) => {
-            if (err) reject(err); // if there's error in this query, then reject the operation
-            else resolve(row); // if not, then return the corresponding record (row)
-        });
+exports.findById = async (id) => {
+    await db.ready;
+    return new Promise((resolve, reject) => {
+    db.get("SELECT * FROM events WHERE id = ?", [id], (err, row) => err ? reject(err) : resolve(row));
+    });
+};
+
+exports.insert = async (event) => {
+    await db.ready;
+    return new Promise((resolve, reject) => {
+    const sql = `INSERT INTO events
+        (event_type, street_loc, latitude, longitude, video_number, timestamp, timestamp_seconds, frame)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+    const params = [event.event_type, event.street_location, event.latitude, event.longitude,
+        event.video_number, event.timestamp, event.timestamp_seconds, event.frame];
+    db.run(sql, params, function (err) {
+        if (err) return reject(err);
+        db.get("SELECT * FROM events WHERE id = ?", [this.lastID], (selectErr, row) => selectErr ? reject(selectErr) : resolve(row));
+    });
     });
 };

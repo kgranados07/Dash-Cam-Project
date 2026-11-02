@@ -6,7 +6,7 @@ import threading
 from datetime import datetime
 
 
-CAMERA = 2
+CAMERA = 4
 WIDTH = 1280
 HEIGHT = 720
 FPS = 30

@@ -5,6 +5,7 @@ import threading
 
 from record import record_segments
 from analyze import analyze_video
+from events import create_event, post_event
 
 
 OUTPUT_DIR = "recordings"
@@ -73,7 +74,14 @@ def main():
                 # Only the analyzer thread processes videos; recording continues
                 # independently while this call runs.
                 with seen_lock:
-                    analyze_video(item, seen_codes, RESULTS_FILE)
+                    detections = analyze_video(item, seen_codes, RESULTS_FILE)
+                for detection in detections:
+                    try:
+                        event = create_event(detection)
+                        result = post_event(event)
+                        print(f"Event sent to server: {result}", flush=True)
+                    except (ValueError, RuntimeError) as exc:
+                        print(f"Event upload failed for {item}: {exc}", flush=True)
             except Exception as exc:
                 print(f"Analyzer error for {item}: {exc}", flush=True)
 
@@ -92,7 +100,14 @@ def main():
             if item is not None:
                 try:
                     with seen_lock:
-                        analyze_video(item, seen_codes, RESULTS_FILE)
+                        detections = analyze_video(item, seen_codes, RESULTS_FILE)
+                    for detection in detections:
+                        try:
+                            event = create_event(detection)
+                            result = post_event(event)
+                            print(f"Event sent to server: {result}", flush=True)
+                        except (ValueError, RuntimeError) as exc:
+                            print(f"Event upload failed for {item}: {exc}", flush=True)
                 except Exception as exc:
                     print(f"Analyzer error for {item}: {exc}", flush=True)
 

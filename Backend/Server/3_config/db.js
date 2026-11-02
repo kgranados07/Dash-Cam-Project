@@ -1,23 +1,33 @@
-// Config layer: DB connection
 const sqlite3 = require("sqlite3").verbose();
-const db = new sqlite3.Database("./4_database/shop.db");
-
-// Initialize schema from schema.sql (creates table automatically)
-// Reads the schema.sql file
 const fs = require("fs");
 const path = require("path");
-const schemaPath = path.join(__dirname, "../4_database/schema.sql");
+const db = new sqlite3.Database(path.join(__dirname, "../4_database/shop.db"));
+const schema = fs.readFileSync(path.join(__dirname, "../4_database/schema.sql"), "utf8");
 
-const schema = fs.readFileSync(schemaPath, "utf-8");
-
-// Executes the SQL commands from schema.sql.
-db.exec(schema, (err) => {
-    if(err) {
-        console.error("Error initializing database:", err.message);
-    } else {
-        console.log("Congratulations! DB initialized with schema.sql");
-    }
+db.ready = new Promise((resolve, reject) => {
+    db.exec(schema, (err) => {
+        if (err) return reject(err);
+        db.all("PRAGMA table_info(events)", (infoErr, columns) => {
+            if (infoErr) return reject(infoErr);
+            const existing = new Set(columns.map(column => column.name));
+            const migrations = [
+                ["latitude", "REAL"], ["longitude", "REAL"], ["video_number", "TEXT"],
+                ["timestamp", "TEXT"], ["timestamp_seconds", "REAL"], ["frame", "INTEGER"]
+            ].filter(([name]) => !existing.has(name));
+            let index = 0;
+            const next = (migrationErr) => {
+                if (migrationErr) return reject(migrationErr);
+                if (index >= migrations.length) {
+                    console.log("Database initialized.");
+                    return resolve();
+                }
+                const [name, type] = migrations[index++];
+                db.run(`ALTER TABLE events ADD COLUMN ${name} ${type}`, next);
+            };
+            next();
+        });
+    });
 });
 
-// Exports the db object so the upper layer (persistence) can use it
+db.ready.catch(err => console.error("Database initialization failed:", err.message));
 module.exports = db;

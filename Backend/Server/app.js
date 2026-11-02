@@ -1,18 +1,12 @@
-// Entry point - start server (turn on your server)
-const express = require("express"); // imports the express web framework (tool) to create a server
-const eventController = require("./0_presentation/eventController"); // imports the presentation layer
-const ticketController = require("./0_presentation/ticketController")
+const express = require("express");
+const eventController = require("./0_presentation/eventController");
+const ticketController = require("./0_presentation/ticketController");
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-const app = express(); // Created an express app instance (server)
-const PORT = 3000;
+app.use(express.json({ limit: "1mb" }));
+app.post("/events", eventController.postEvent);
+app.get("/events/:id", eventController.getEvent);
+app.get("/tickets/:id", ticketController.getTicket);
 
-// Routing
-// Route parameters: any user request (e.g., /orders/1) is passed to orderController.getOrder
-app.get("/events/:id", eventController.getEvent); // Defines a route for GET /orders/:id
-app.get("/tickets/:id",ticketController.getTicket);
-
-// Starts the server
-// Confirms that it's running at http://localhost:3000
-app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`)
-});
+app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
