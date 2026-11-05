@@ -5,7 +5,7 @@ import threading
 
 from record import record_segments
 from analyze import analyze_video
-from events import create_event, post_event
+from events import create_event, post_event, Event
 
 
 OUTPUT_DIR = "recordings"
