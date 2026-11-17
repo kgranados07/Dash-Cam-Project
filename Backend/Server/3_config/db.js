@@ -1,7 +1,7 @@
 const sqlite3 = require("sqlite3").verbose();
 const fs = require("fs");
 const path = require("path");
-const db = new sqlite3.Database(path.join(__dirname, "../4_database/shop.db"));
+const db = new sqlite3.Database(path.join(__dirname, "../4_database/database.db"));
 const schema = fs.readFileSync(path.join(__dirname, "../4_database/schema.sql"), "utf8");
 
 db.ready = new Promise((resolve, reject) => {

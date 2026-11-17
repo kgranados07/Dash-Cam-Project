@@ -19,5 +19,18 @@ CREATE TABLE IF NOT EXISTS tickets (
     price REAL
 );
 
+CREATE TABLE IF NOT EXISTS users (
+    internal_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL UNIQUE DEFAULT (abs(random()) % 9000000000 + 1000000000),
+    username TEXT,
+    password_ TEXT
+);
+
+CREATE TABLE IF NOT EXISTS cameras (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    camera_name TEXT
+);
+
 INSERT OR IGNORE INTO events(id, user_id, event_type, street_loc)
 VALUES (1, 456, 'SPEED', 'Getty Square, Yonkers, NY');
