@@ -10,3 +10,16 @@ exports.findById = (id) => {
         });
     });
 };
+
+exports.insert = async (ticket) => {
+    await db.ready;
+    return new Promise((resolve, reject) => {
+        const sql = "INSERT INTO tickets (user_id, violation, street_loc, price) VALUES (?, ?, ?, ?)";
+        const params = [ticket.user_id, ticket.violation, ticket.street_location, ticket.price];
+        db.run(sql, params, function (err) {
+            if (err) return reject(err);
+            db.get("SELECT * FROM tickets WHERE id = ?", [this.lastID],
+                (selectErr, row) => selectErr ? reject(selectErr) : resolve(row));
+        });
+    });
+};

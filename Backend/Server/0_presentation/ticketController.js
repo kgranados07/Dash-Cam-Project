@@ -25,3 +25,16 @@ exports.getTicket = async(req, res) => {
         res.status(500).json({message: "Internal Server Error"});
     }
 }
+
+exports.postTicket = async (req, res) => {
+    try {
+        const ticket = await TicketService.createTicket(req.body);
+        return res.status(201).json(ticket);
+    } catch (err) {
+        if (err.message.startsWith("Invalid ticket:")) {
+            return res.status(400).json({ message: err.message });
+        }
+        console.error("POST ticket error:", err.message);
+        return res.status(500).json({ message: "Could not save ticket" });
+    }
+};

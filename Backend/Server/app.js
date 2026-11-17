@@ -8,6 +8,9 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: "1mb" }));
 app.post("/events", eventController.postEvent);
+app.post("/cameras", cameraController.postCamera);
+app.post("/tickets", ticketController.postTicket);
+app.post("/users", userController.postUser);
 app.get("/events/:id", eventController.getEvent);
 app.get("/tickets/:id", ticketController.getTicket);
 app.get("/cameras/:id", cameraController.getCamera);
