@@ -16,6 +16,6 @@ app.get("/events/:id", eventController.getEvent);
 app.get("/tickets/:id", ticketController.getTicket);
 app.get("/cameras/:id", cameraController.getCamera);
 app.get("/users/:id", userController.getUser);
-app.use(express.static(path.join(__dirname,"public")));
+app.use(express.static('public'));
 
 app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
