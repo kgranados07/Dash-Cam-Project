@@ -1,7 +1,45 @@
 <!DOCTYPE html>
+<html>
 <head>
-    <title>Log-in Test</title>
+  <title>Sign-up</title>
+  <style>
+    .rounded-input {
+      border-radius: 15px;
+      border: 2px solid #ccc;
+      padding: 10px 15px;
+      width: 250px;
+      font-size: 16px;
+      outline: none;
+    }
+      .rounded-button {
+      border-radius: 15px;
+      border: 2px solid #ccc;
+      padding: 10px 15px;
+      width: 100px;
+      font-size: 16px;
+      outline: none;
+    }
+    /* Optional focus highlight */
+    .rounded-input:focus {
+      border-color: #ff00f2;
+      box-shadow: 0 0 0 3px rgba(217, 0, 255, 0.25);
+    }
+  </style>
 </head>
 <body>
-    <h1>Welcome to Login!</h1>
+  <h2>Signup Form</h2>
+  <form action="/signup" method="POST">
+    <label>Name:</label><br>
+    <input type="text" name="name" class="rounded-input" placeholder="Enter your username" required><br><br>
+
+    <label>Email:</label><br>
+    <input type="email" name="email" class="rounded-input" placeholder="Enter your email" required><br><br>
+    <label>Password:</label><br>
+    <input type="password" name="password" class="rounded-input" placeholder="Enter your password" required></input>
+    <br><br>
+    <button type="submit" class="rounded-button">Submit</button>
+  </form>
+
+  <br>
 </body>
+</html>
