@@ -1,0 +1,27 @@
+@font-face {
+    font-family: "GruppoFamily";
+    src: url(./fonts/gruppo.ttf) format("truetype");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+body {
+    font-family: "GruppoFamily";
+}
+.TopNavBar {
+    display: flex;
+    justify-content: space-between; /* Pushes logo to left, links to right */
+    align-items: center;           /* Centers items vertically */
+    background-color: #000000;        /* Dark background */
+    padding: 1rem 2rem;
+    font-size: x-large;
+    border-radius: 30px;
+}
+
+.TopNavLinks {
+    list-style: none;             /* Removes standard bullet points */
+    display: flex;                /* Aligns links horizontally */
+    gap: 20px;
+    color: azure;
+}
