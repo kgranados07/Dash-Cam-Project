@@ -34,3 +34,6 @@ CREATE TABLE IF NOT EXISTS cameras (
 
 INSERT OR IGNORE INTO events(id, user_id, event_type, street_loc)
 VALUES (1, 456, 'SPEED', 'Getty Square, Yonkers, NY');
+
+INSERT or IGNORE INTO users(user_id,username,password_)
+VALUES (1233453,"User123","password123")
