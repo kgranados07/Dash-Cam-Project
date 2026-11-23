@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { updateTicketPayment } from "../config/api";
 
 // Same icon/status maps used in TicketListScreen, kept consistent (Option B style).
 const TICKET_STYLE = {
@@ -22,7 +23,9 @@ const STATUS_STYLE = {
 };
 
 export default function TicketDetailScreen({ route, navigation }) {
-  const { ticket } = route.params;
+  const [ticket, setTicket] = useState(route.params.ticket);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState("");
   const ticketStyle = TICKET_STYLE[ticket.type] || {
     icon: "alert-circle-outline",
     color: "#5F5E5A",
@@ -31,6 +34,18 @@ export default function TicketDetailScreen({ route, navigation }) {
     bg: "#F1EFE8",
     text: "#444441",
   };
+
+  async function markAsPaid() {
+    setIsSaving(true);
+    setError("");
+    try {
+      setTicket(await updateTicketPayment(ticket.id, 1));
+    } catch (updateError) {
+      setError(updateError.message);
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -64,8 +79,8 @@ export default function TicketDetailScreen({ route, navigation }) {
 
       <View style={styles.infoBlock}>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Time</Text>
-          <Text style={styles.infoValue}>{ticket.time}</Text>
+          <Text style={styles.infoLabel}>Realtime</Text>
+          <Text style={styles.infoValue}>{ticket.realtime}</Text>
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Location</Text>
@@ -75,11 +90,23 @@ export default function TicketDetailScreen({ route, navigation }) {
           <Text style={styles.infoLabel}>Rule</Text>
           <Text style={styles.infoValue}>{ticket.rule}</Text>
         </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Amount</Text>
+          <Text style={styles.infoValue}>${ticket.price.toFixed(2)}</Text>
+        </View>
       </View>
 
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
       <View style={styles.actionRow}>
-        <TouchableOpacity style={styles.payButton}>
-          <Text style={styles.payButtonText}>Pay</Text>
+        <TouchableOpacity
+          style={styles.payButton}
+          onPress={markAsPaid}
+          disabled={isSaving || ticket.status === "Paid"}
+        >
+          <Text style={styles.payButtonText}>
+            {isSaving ? "Saving..." : ticket.status === "Paid" ? "Paid" : "Mark as paid"}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.contestButton}>
           <Text style={styles.contestButtonText}>Contest</Text>
@@ -140,4 +167,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   contestButtonText: { color: "#555", fontWeight: "700", fontSize: 13 },
+  errorText: { color: "#A32D2D", fontSize: 12, marginBottom: 12 },
 });

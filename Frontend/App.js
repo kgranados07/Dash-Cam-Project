@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,61 +7,67 @@ import {
   StyleSheet,
   SafeAreaView,
 } from "react-native";
-
-const startingTickets = [
-  {
-    id: "1",
-    type: "Stop Sign Violation",
-    time: "10:30 AM",
-    zone: "Parking Lot A",
-    rule: "Failure to stop at stop sign",
-    status: "Unpaid",
-  },
-  {
-    id: "2",
-    type: "Speeding (School Zone)",
-    time: "11:15 AM",
-    zone: "School Zone",
-    rule: "Speed limit exceeded",
-    status: "Unpaid",
-  },
-  {
-    id: "3",
-    type: "Parking Violation",
-    time: "12:05 PM",
-    zone: "Parking Lot B",
-    rule: "Improper parking",
-    status: "Paid",
-  },
-];
+import { fetchTickets, updateTicketPayment } from "./config/api";
 
 export default function App() {
   const [screen, setScreen] = useState("Camera");
-  const [tickets, setTickets] = useState(startingTickets);
+  const [tickets, setTickets] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [filter, setFilter] = useState("All");
+  const [isLoadingTickets, setIsLoadingTickets] = useState(true);
+  const [isSavingPayment, setIsSavingPayment] = useState(false);
+  const [apiError, setApiError] = useState("");
+  const [canRetryTickets, setCanRetryTickets] = useState(false);
+  const [reloadTicketsKey, setReloadTicketsKey] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    setIsLoadingTickets(true);
+    setApiError("");
+    setCanRetryTickets(false);
+    fetchTickets()
+      .then((loadedTickets) => {
+        if (active) setTickets(loadedTickets);
+      })
+      .catch((error) => {
+        if (active) {
+          setApiError(error.message);
+          setCanRetryTickets(true);
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoadingTickets(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [reloadTicketsKey]);
 
   function openTicket(ticket) {
     setSelectedTicket(ticket);
     setScreen("Details");
   }
 
-  function changePaymentStatus() {
-    const newStatus =
-      selectedTicket.status === "Paid" ? "Unpaid" : "Paid";
-
-    const updatedTicket = {
-      ...selectedTicket,
-      status: newStatus,
-    };
-
-    setTickets(
-      tickets.map((ticket) =>
-        ticket.id === selectedTicket.id ? updatedTicket : ticket
-      )
-    );
-
-    setSelectedTicket(updatedTicket);
+  async function changePaymentStatus() {
+    setIsSavingPayment(true);
+    setApiError("");
+    try {
+      const updatedTicket = await updateTicketPayment(
+        selectedTicket.id,
+        selectedTicket.status !== "Paid"
+      );
+      setTickets((currentTickets) =>
+        currentTickets.map((ticket) =>
+          ticket.id === updatedTicket.id ? updatedTicket : ticket
+        )
+      );
+      setSelectedTicket(updatedTicket);
+    } catch (error) {
+      setApiError(error.message);
+      setCanRetryTickets(false);
+    } finally {
+      setIsSavingPayment(false);
+    }
   }
 
   function showTickets() {
@@ -99,6 +105,16 @@ export default function App() {
         <Text style={styles.logo}>DASH CAM</Text>
         <Text style={styles.headerSubtitle}>Ticket Management</Text>
       </View>
+      {apiError ? (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorText}>{apiError}</Text>
+          {canRetryTickets ? (
+            <TouchableOpacity onPress={() => setReloadTicketsKey((key) => key + 1)}>
+              <Text style={styles.retryText}>Retry</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
 
       {screen === "Camera" && (
         <ScrollView contentContainerStyle={styles.content}>
@@ -169,13 +185,16 @@ export default function App() {
           </View>
 
           <ScrollView>
-            {visibleTickets.length === 0 && (
+            {isLoadingTickets && (
+              <Text style={styles.emptyText}>Loading tickets...</Text>
+            )}
+            {!isLoadingTickets && visibleTickets.length === 0 && (
               <Text style={styles.emptyText}>
                 No tickets in this category.
               </Text>
             )}
 
-            {visibleTickets.map((ticket) => (
+            {!isLoadingTickets && visibleTickets.map((ticket) => (
               <TouchableOpacity
                 key={ticket.id}
                 style={styles.ticketCard}
@@ -184,7 +203,7 @@ export default function App() {
                 <View style={styles.ticketInfo}>
                   <Text style={styles.ticketTitle}>{ticket.type}</Text>
                   <Text style={styles.ticketMeta}>
-                    {ticket.time} · {ticket.zone}
+                    {ticket.zone} · ${ticket.price.toFixed(2)}
                   </Text>
                 </View>
 
@@ -222,8 +241,8 @@ export default function App() {
           </TouchableOpacity>
 
           <View style={styles.summaryCard}>
-            <Text style={styles.detailLabel}>Time</Text>
-            <Text style={styles.detailValue}>{selectedTicket.time}</Text>
+            <Text style={styles.detailLabel}>Realtime</Text>
+            <Text style={styles.detailValue}>{selectedTicket.realtime}</Text>
 
             <View style={styles.line} />
 
@@ -234,6 +253,11 @@ export default function App() {
 
             <Text style={styles.detailLabel}>Rule</Text>
             <Text style={styles.detailValue}>{selectedTicket.rule}</Text>
+
+            <View style={styles.line} />
+
+            <Text style={styles.detailLabel}>Amount</Text>
+            <Text style={styles.detailValue}>${selectedTicket.price.toFixed(2)}</Text>
           </View>
 
           <TouchableOpacity
@@ -242,10 +266,12 @@ export default function App() {
               selectedTicket.status === "Paid" && styles.unpaidButton,
             ]}
             onPress={changePaymentStatus}
-            disabled={selectedTicket.status === "Contested"}
+            disabled={isSavingPayment || selectedTicket.status === "Contested"}
           >
             <Text style={styles.paymentButtonText}>
-              {selectedTicket.status === "Paid"
+              {isSavingPayment
+                ? "Saving..."
+                : selectedTicket.status === "Paid"
                 ? "☐ Mark as Unpaid"
                 : "☑ Mark as Paid"}
             </Text>
@@ -334,6 +360,20 @@ const styles = StyleSheet.create({
     color: "#64748B",
     marginTop: 3,
     fontSize: 12,
+  },
+  errorBanner: {
+    backgroundColor: "#FEE2E2",
+    padding: 12,
+  },
+  errorText: {
+    color: "#991B1B",
+    fontSize: 13,
+  },
+  retryText: {
+    color: "#991B1B",
+    fontSize: 13,
+    fontWeight: "700",
+    marginTop: 6,
   },
   content: {
     padding: 20,

@@ -10,6 +10,20 @@ exports.getTicketById = async (id) => {
     return ticket; // Passes the retrieved order back to the upper layer (0_presentation)
 };
 
+exports.getTickets = async () => TicketRepo.findAll();
+
+exports.updatePaidStatus = async (id, isPaid) => {
+    const ticketId = Number(id);
+    const paidValue = Number(isPaid);
+    if (!Number.isSafeInteger(ticketId) || ticketId <= 0) {
+        throw new Error("Invalid ticket: id must be a positive integer");
+    }
+    if (!Number.isInteger(paidValue) || (paidValue !== 0 && paidValue !== 1)) {
+        throw new Error("Invalid ticket: is_paid must be 0 or 1");
+    }
+    return TicketRepo.updatePaidStatus(ticketId, paidValue);
+};
+
 exports.createTicket = async (input) => {
     const ticket = {
         user_id: input?.user_id == null ? null : Number(input.user_id),

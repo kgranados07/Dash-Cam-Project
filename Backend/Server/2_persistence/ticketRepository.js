@@ -11,6 +11,16 @@ exports.findById = (id) => {
     }));
 };
 
+exports.findAll = async () => {
+    await db.ready;
+    return new Promise((resolve, reject) => {
+        db.all("SELECT * FROM tickets ORDER BY id DESC", (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+        });
+    });
+};
+
 exports.insert = async (ticket) => {
     await db.ready;
     return new Promise((resolve, reject) => {
@@ -19,6 +29,18 @@ exports.insert = async (ticket) => {
         db.run(sql, params, function (err) {
             if (err) return reject(err);
             db.get("SELECT * FROM tickets WHERE id = ?", [this.lastID],
+                (selectErr, row) => selectErr ? reject(selectErr) : resolve(row));
+        });
+    });
+};
+
+exports.updatePaidStatus = async (id, isPaid) => {
+    await db.ready;
+    return new Promise((resolve, reject) => {
+        db.run("UPDATE tickets SET is_paid = ? WHERE id = ?", [isPaid, id], function (err) {
+            if (err) return reject(err);
+            if (this.changes === 0) return resolve(null);
+            db.get("SELECT * FROM tickets WHERE id = ?", [id],
                 (selectErr, row) => selectErr ? reject(selectErr) : resolve(row));
         });
     });

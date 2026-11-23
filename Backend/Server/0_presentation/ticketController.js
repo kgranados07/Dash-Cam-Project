@@ -1,6 +1,15 @@
 // Presentation layer: the controller does NOT access the DB directly, this delegates to the service
 const TicketService = require("../1_business/ticketService");
 
+exports.getTickets = async (req, res) => {
+    try {
+        return res.json(await TicketService.getTickets());
+    } catch (err) {
+        console.error("GET tickets error:", err.message);
+        return res.status(500).json({ message: "Could not load tickets" });
+    }
+};
+
 // Controller function: Get a specific order by ID
 // This is mapped in Express server with: app.get("/orders/:id", orderController.getOrder)
 exports.getTicket = async(req, res) => {
@@ -36,5 +45,19 @@ exports.postTicket = async (req, res) => {
         }
         console.error("POST ticket error:", err.message);
         return res.status(500).json({ message: "Could not save ticket" });
+    }
+};
+
+exports.updatePayment = async (req, res) => {
+    try {
+        const ticket = await TicketService.updatePaidStatus(req.params.id, req.body?.is_paid);
+        if (!ticket) return res.status(404).json({ message: "Ticket not found" });
+        return res.json(ticket);
+    } catch (err) {
+        if (err.message.startsWith("Invalid ticket:")) {
+            return res.status(400).json({ message: err.message });
+        }
+        console.error("PATCH ticket payment error:", err.message);
+        return res.status(500).json({ message: "Could not update ticket payment status" });
     }
 };

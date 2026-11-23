@@ -29,9 +29,24 @@ const STATUS_STYLE = {
 export default function TicketListScreen({ navigation }) {
   const [tickets, setTickets] = useState([]);
   const [activeFilter, setActiveFilter] = useState("All");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchTickets().then(setTickets);
+    let active = true;
+    fetchTickets()
+      .then((loadedTickets) => {
+        if (active) setTickets(loadedTickets);
+      })
+      .catch((fetchError) => {
+        if (active) setError(fetchError.message);
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const filteredTickets =
@@ -92,7 +107,7 @@ export default function TicketListScreen({ navigation }) {
               <View style={styles.cardText}>
                 <Text style={styles.ticketType}>{item.type}</Text>
                 <Text style={styles.ticketMeta}>
-                  {item.time} · {item.zone}
+                  {item.zone} · ${item.price.toFixed(2)}
                 </Text>
               </View>
               <View
@@ -106,7 +121,9 @@ export default function TicketListScreen({ navigation }) {
           );
         }}
         ListEmptyComponent={
-          <Text style={styles.empty}>No tickets in this category.</Text>
+          <Text style={styles.empty}>
+            {isLoading ? "Loading tickets..." : error || "No tickets in this category."}
+          </Text>
         }
       />
     </SafeAreaView>
