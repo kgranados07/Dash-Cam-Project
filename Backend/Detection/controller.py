@@ -6,11 +6,25 @@ import threading
 from record import record_segments
 from analyze import analyze_video
 from events import create_event, post_event, Event
+from tickets import Ticket, post_ticket
 
 
 OUTPUT_DIR = "recordings"
 RESULTS_FILE = "results.json"
 SEGMENT_SECONDS = 30
+
+
+def submit_violation_ticket(violation, event, price, user_id=None):
+    """Upload a ticket for a violation already confirmed by detection logic."""
+    if not isinstance(event, Event):
+        raise TypeError("event must be an Event")
+    ticket = Ticket(
+        violation=violation,
+        street_location=event.street_location,
+        price=price,
+        user_id=user_id,
+    )
+    return post_ticket(ticket)
 
 
 def main():
