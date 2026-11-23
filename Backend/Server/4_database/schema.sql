@@ -40,3 +40,6 @@ VALUES (1, 456, 'SPEED', 'Getty Square, Yonkers, NY');
 
 INSERT or IGNORE INTO users(user_id,username,password_)
 VALUES (1233453,"User123","password123")
+
+INSERT or IGNORE INTO tickets(user_id,violation,street_loc,price,is_paid,inrealtime)
+VALUES(1233453,"Parking","Main St",230.00,0,"12:34")
