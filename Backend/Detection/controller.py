@@ -23,6 +23,7 @@ def submit_violation_ticket(violation, event, price, user_id=None):
         street_location=event.street_location,
         price=price,
         user_id=user_id,
+        inrealtime=event.inrealtime,
     )
     return post_ticket(ticket)
 

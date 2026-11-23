@@ -9,7 +9,7 @@ import urllib.request
 class Ticket:
     """Ticket payload accepted by the Node server's POST /tickets route."""
 
-    def __init__(self, violation, street_location, price, user_id=None):
+    def __init__(self, violation, street_location, price, user_id=None, is_paid=0, inrealtime=None):
         if not isinstance(violation, str) or not violation.strip():
             raise ValueError("violation is required")
         if not isinstance(street_location, str) or not street_location.strip():
@@ -22,18 +22,26 @@ class Ticket:
             isinstance(user_id, bool) or not isinstance(user_id, int) or user_id <= 0
         ):
             raise ValueError("user_id must be a positive integer")
+        if isinstance(is_paid, bool):
+            is_paid = int(is_paid)
+        if not isinstance(is_paid, int) or is_paid not in (0, 1):
+            raise ValueError("is_paid must be 0 or 1")
 
         self.violation = violation.strip()
         self.street_location = street_location.strip()
         self.price = price
         self.user_id = user_id
+        self.is_paid = is_paid
+        self.inrealtime = inrealtime
 
     def to_dict(self):
         return {
             "user_id": self.user_id,
             "violation": self.violation,
-            "street_location": self.street_location,
+            "street_loc": self.street_location,
             "price": self.price,
+            "is_paid": self.is_paid,
+            "inrealtime": self.inrealtime,
         }
 
 

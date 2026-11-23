@@ -9,7 +9,7 @@ class Event:
     """A class that describes a traffic event."""
 
     def __init__(self):
-        self.user_id = 0
+        self.user_id = None
         self.event_type = None
         self.street_location = None
         self.latitude = None
@@ -18,18 +18,20 @@ class Event:
         self.timestamp = None
         self.timestamp_seconds = None
         self.frame = None
+        self.inrealtime = None
 
     def to_dict(self):
         return {
             "user_id": self.user_id,
             "event_type": self.event_type,
-            "street_location": self.street_location,
+            "street_loc": self.street_location,
             "latitude": self.latitude,
             "longitude": self.longitude,
             "video_number": self.video_number,
             "timestamp": self.timestamp,
             "timestamp_seconds": self.timestamp_seconds,
             "frame": self.frame,
+            "inrealtime": self.inrealtime,
         }
 
     def create(self, detection=None):
@@ -39,6 +41,7 @@ class Event:
         qrlist = [piece.strip() for piece in str(qr_data).split(",")] if qr_data else []
 
         try:
+            self.user_id = detection.get("user_id")
             self.event_type = qrlist[0] if len(qrlist) > 0 else None
             self.street_location = qrlist[1] if len(qrlist) > 1 else None
             self.latitude = float(qrlist[2]) if len(qrlist) > 2 else None
@@ -47,7 +50,14 @@ class Event:
             self.timestamp = detection.get("timestamp")
             self.timestamp_seconds = detection.get("timestamp_seconds")
             self.frame = detection.get("frame")
+            self.inrealtime = detection.get("inrealtime")
 
+            if self.user_id is not None and (
+                isinstance(self.user_id, bool)
+                or not isinstance(self.user_id, int)
+                or self.user_id <= 0
+            ):
+                raise ValueError("user_id must be a positive integer")
             if not self.event_type or not self.street_location:
                 raise ValueError("QR payload is missing event_type or street_location")
             if self.latitude is None or self.longitude is None:
@@ -56,7 +66,7 @@ class Event:
                 raise ValueError("QR payload coordinates are out of range")
         except (TypeError, ValueError) as exc:
             print("QR failed to parse! Sorry mate!")
-            self.user_id = 0
+            self.user_id = None
             self.event_type = None
             self.street_location = None
             self.latitude = None
@@ -65,6 +75,7 @@ class Event:
             self.timestamp = None
             self.timestamp_seconds = None
             self.frame = None
+            self.inrealtime = None
             raise ValueError("Invalid QR payload") from exc
 
         return self
