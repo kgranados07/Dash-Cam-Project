@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS events (
     video_number TEXT,
     timestamp TEXT,
     timestamp_seconds REAL,
-    frame INTEGER
+    frame INTEGER,
+    inrealtime TEXT
 );
 
 CREATE TABLE IF NOT EXISTS tickets (
@@ -16,7 +17,9 @@ CREATE TABLE IF NOT EXISTS tickets (
     user_id INTEGER,
     violation TEXT,
     street_loc TEXT,
-    price REAL
+    price REAL,
+    is_paid INTEGER DEFAULT 0,
+    inrealtime TEXT
 );
 
 CREATE TABLE IF NOT EXISTS users (

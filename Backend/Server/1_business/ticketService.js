@@ -14,8 +14,10 @@ exports.createTicket = async (input) => {
     const ticket = {
         user_id: input?.user_id == null ? null : Number(input.user_id),
         violation: input?.violation,
-        street_location: input?.street_location,
+        street_loc: input?.street_loc ?? input?.street_location,
         price: Number(input?.price),
+        is_paid: input?.is_paid == null ? 0 : Number(input.is_paid),
+        inrealtime: input?.inrealtime == null ? null : String(input.inrealtime),
     };
     if (ticket.user_id !== null && (!Number.isSafeInteger(ticket.user_id) || ticket.user_id <= 0)) {
         throw new Error("Invalid ticket: user_id must be a positive integer");
@@ -23,11 +25,14 @@ exports.createTicket = async (input) => {
     if (typeof ticket.violation !== "string" || !ticket.violation.trim()) {
         throw new Error("Invalid ticket: violation is required");
     }
-    if (typeof ticket.street_location !== "string" || !ticket.street_location.trim()) {
-        throw new Error("Invalid ticket: street_location is required");
+    if (typeof ticket.street_loc !== "string" || !ticket.street_loc.trim()) {
+        throw new Error("Invalid ticket: street_loc is required");
     }
     if (!Number.isFinite(ticket.price) || ticket.price < 0) {
         throw new Error("Invalid ticket: price must be a non-negative number");
+    }
+    if (!Number.isInteger(ticket.is_paid) || (ticket.is_paid !== 0 && ticket.is_paid !== 1)) {
+        throw new Error("Invalid ticket: is_paid must be 0 or 1");
     }
     return TicketRepo.insert(ticket);
 };
