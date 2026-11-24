@@ -12,7 +12,7 @@ from tickets import Ticket, post_ticket
 OUTPUT_DIR = "recordings"
 RESULTS_FILE = "results.json"
 SEGMENT_SECONDS = 30
-FPS = 60
+FPS = 30
 SPEED_MARKER_DISTANCE_FEET = 3.0
 PARKING_VIOLATION_SECONDS = 30.0
 STOP_SIGN_MINIMUM_SECONDS = 10.0

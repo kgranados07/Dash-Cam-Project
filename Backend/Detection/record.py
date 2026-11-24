@@ -6,10 +6,10 @@ import threading
 from datetime import datetime
 
 
-CAMERA = int(os.getenv("CAMERA_DEVICE", "0"))
+CAMERA = int(os.getenv("CAMERA_DEVICE", "8"))
 WIDTH = 1280
 HEIGHT = 720
-FPS = 60
+FPS = 30
 SEGMENT_SECONDS = 30
 OUTPUT_DIR = "recordings"
 
@@ -42,6 +42,7 @@ def record_segments(completed_queue, stop_event, output_dir=OUTPUT_DIR,
                     break
             candidate_cap.release()
 
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
     cap.set(cv2.CAP_PROP_FPS, fps)
@@ -89,13 +90,31 @@ def record_segments(completed_queue, stop_event, output_dir=OUTPUT_DIR,
         print(f"Recording: {path}", flush=True)
         return video_writer, path
 
+    consecutive_read_failures = 0
+
     try:
         while not stop_event.is_set():
             ok, frame = cap.read()
             if not ok:
-                print("Camera frame read failed; retrying.", flush=True)
+                consecutive_read_failures += 1
+                print(
+                    f"Camera frame read failed ({consecutive_read_failures}); retrying.",
+                    flush=True,
+                )
                 time.sleep(0.1)
+
+                if consecutive_read_failures >= 30:
+                    print("Reopening camera after repeated read failures.", flush=True)
+                    cap.release()
+                    cap = cv2.VideoCapture(camera, cv2.CAP_V4L2)
+                    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+                    cap.set(cv2.CAP_PROP_FPS, fps)
+                    consecutive_read_failures = 0
                 continue
+
+            consecutive_read_failures = 0
 
             now = time.monotonic()
             actual_size = (frame.shape[1], frame.shape[0])
