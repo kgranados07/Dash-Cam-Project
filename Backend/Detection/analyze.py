@@ -5,7 +5,7 @@ import sys
 from datetime import timedelta
 
 
-def analyze_video(video_file, seen_codes=None, results_file="qr_results.json"):
+def analyze_video(video_file, seen_codes=None, results_file="qr_results.json", deduplicate=True):
     """
     Analyze a completed video without displaying any windows.
     Each QR payload is recorded only once for the entire controller session
@@ -37,9 +37,10 @@ def analyze_video(video_file, seen_codes=None, results_file="qr_results.json"):
 
             data, points, _ = qr.detectAndDecode(frame)
             if data:
-                # Deduplicate by QR payload across all processed segments.
-                if data not in seen_codes:
-                    seen_codes.add(data)
+                # Continuous mode emits repeated sightings for dwell and timing trackers.
+                if not deduplicate or data not in seen_codes:
+                    if deduplicate:
+                        seen_codes.add(data)
                     detection = {
                         "qr_data": data,
                         "video": os.path.basename(video_file),

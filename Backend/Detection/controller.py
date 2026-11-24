@@ -12,6 +12,20 @@ from tickets import Ticket, post_ticket
 OUTPUT_DIR = "recordings"
 RESULTS_FILE = "results.json"
 SEGMENT_SECONDS = 30
+FPS = 60
+SPEED_MARKER_DISTANCE_FEET = 3.0
+PARKING_VIOLATION_SECONDS = 30.0
+STOP_SIGN_MINIMUM_SECONDS = 10.0
+
+TICKET_RULES = {
+    "speed": ("Speeding (School Zone)", 230.00),
+    "speeding": ("Speeding (School Zone)", 230.00),
+    "parking": ("Parking Violation", 100.00),
+    "parkingviolation": ("Parking Violation", 100.00),
+    "stop": ("Stop Sign Violation", 100.00),
+    "stopsign": ("Stop Sign Violation", 100.00),
+    "stopsignviolation": ("Stop Sign Violation", 100.00),
+}
 
 
 def submit_violation_ticket(violation, event, price, user_id=None):
@@ -22,10 +36,38 @@ def submit_violation_ticket(violation, event, price, user_id=None):
         violation=violation,
         street_location=event.street_location,
         price=price,
-        user_id=user_id,
+        user_id=event.user_id if user_id is None else user_id,
         inrealtime=event.inrealtime,
     )
     return post_ticket(ticket)
+
+
+def submit_ticket_from_event(event):
+    """Create a ticket when event.event_type matches a configured violation."""
+    if not isinstance(event, Event):
+        raise TypeError("event must be an Event")
+
+    normalized = "".join(
+        character for character in event.event_type.lower()
+        if character.isalnum()
+    )
+    rule = TICKET_RULES.get(normalized)
+
+    if rule is None:
+        print(f"No ticket rule configured for event type: {event.event_type}", flush=True)
+        return None
+
+    violation, price = rule
+
+    if normalized in ("speed", "speeding"):
+        print(
+            "Speed ticket requires a measured time between markers; "
+            "see SPEED_MARKER_DISTANCE_FEET.",
+            flush=True,
+        )
+        return None
+
+    return submit_violation_ticket(violation, event, price)
 
 
 def main():
@@ -89,14 +131,20 @@ def main():
                 # Only the analyzer thread processes videos; recording continues
                 # independently while this call runs.
                 with seen_lock:
-                    detections = analyze_video(item, seen_codes, RESULTS_FILE)
+                    detections = analyze_video(
+                        item, seen_codes, RESULTS_FILE, deduplicate=False
+                    )
                 for detection in detections:
                     try:
                         event = create_event(detection)
                         result = post_event(event)
                         print(f"Event sent to server: {result}", flush=True)
+
+                        ticket = submit_ticket_from_event(event)
+                        if ticket is not None:
+                            print(f"Ticket sent to server: {ticket}", flush=True)
                     except (ValueError, RuntimeError) as exc:
-                        print(f"Event upload failed for {item}: {exc}", flush=True)
+                        print(f"Event or ticket upload failed for {item}: {exc}", flush=True)
             except Exception as exc:
                 print(f"Analyzer error for {item}: {exc}", flush=True)
 
@@ -115,14 +163,20 @@ def main():
             if item is not None:
                 try:
                     with seen_lock:
-                        detections = analyze_video(item, seen_codes, RESULTS_FILE)
+                        detections = analyze_video(
+                            item, seen_codes, RESULTS_FILE, deduplicate=False
+                        )
                     for detection in detections:
                         try:
                             event = create_event(detection)
                             result = post_event(event)
                             print(f"Event sent to server: {result}", flush=True)
+
+                            ticket = submit_ticket_from_event(event)
+                            if ticket is not None:
+                                print(f"Ticket sent to server: {ticket}", flush=True)
                         except (ValueError, RuntimeError) as exc:
-                            print(f"Event upload failed for {item}: {exc}", flush=True)
+                            print(f"Event or ticket upload failed for {item}: {exc}", flush=True)
                 except Exception as exc:
                     print(f"Analyzer error for {item}: {exc}", flush=True)
 
