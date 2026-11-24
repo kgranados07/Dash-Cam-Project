@@ -39,7 +39,8 @@ export default function TicketDetailScreen({ route, navigation }) {
     setIsSaving(true);
     setError("");
     try {
-      setTicket(await updateTicketPayment(ticket.id, 1));
+      const updatedTicket = await updateTicketPayment(ticket.id, 1);
+      setTicket(updatedTicket);
     } catch (updateError) {
       setError(updateError.message);
     } finally {

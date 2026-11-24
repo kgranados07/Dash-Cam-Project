@@ -58,7 +58,7 @@ export default function App() {
       );
       setTickets((currentTickets) =>
         currentTickets.map((ticket) =>
-          ticket.id === updatedTicket.id ? updatedTicket : ticket
+          String(ticket.id) === String(updatedTicket.id) ? updatedTicket : ticket
         )
       );
       setSelectedTicket(updatedTicket);
