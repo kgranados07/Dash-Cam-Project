@@ -6,7 +6,7 @@ import threading
 from datetime import datetime
 
 
-CAMERA = 8
+CAMERA = int(os.getenv("CAMERA_DEVICE", "0"))
 WIDTH = 1280
 HEIGHT = 720
 FPS = 60
@@ -25,11 +25,22 @@ def record_segments(completed_queue, stop_event, output_dir=OUTPUT_DIR,
     """
     os.makedirs(output_dir, exist_ok=True)
 
-    # CAP_DSHOW is Windows-specific; use the default backend elsewhere.
-    #if os.name == "nt":
-        #cap = cv2.VideoCapture(camera, cv2.CAP_DSHOW)
-    #else:
+    # Prefer an explicitly configured device. Otherwise scan common Linux
+    # V4L2 indexes because the index may change after reboot or hot-plugging.
     cap = cv2.VideoCapture(camera, cv2.CAP_V4L2)
+    if not cap.isOpened() and os.getenv("CAMERA_DEVICE") is None:
+        cap.release()
+        for candidate in range(16):
+            if candidate == camera:
+                continue
+            candidate_cap = cv2.VideoCapture(candidate, cv2.CAP_V4L2)
+            if candidate_cap.isOpened():
+                ok, _ = candidate_cap.read()
+                if ok:
+                    cap = candidate_cap
+                    camera = candidate
+                    break
+            candidate_cap.release()
 
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
@@ -38,17 +49,29 @@ def record_segments(completed_queue, stop_event, output_dir=OUTPUT_DIR,
     if not cap.isOpened():
         raise RuntimeError(f"Could not open camera {camera}")
 
-    actual_fps = cap.get(cv2.CAP_PROP_FPS)
-    if actual_fps and abs(actual_fps - fps) > 3.0:
-        print(
-            f"Warning: camera reports {actual_fps:.1f} FPS; requested {fps} FPS",
-            flush=True,
-        )
-    elif not actual_fps:
-        print(
-            f"Warning: camera FPS is unavailable from V4L2; assuming {fps} FPS",
-            flush=True,
-        )
+    reported_fps = cap.get(cv2.CAP_PROP_FPS)
+
+    # Measure frames actually delivered by the camera instead of trusting V4L2 metadata.
+    warmup_start = time.monotonic()
+    warmup_frames = 0
+    warmup_size = None
+    for _ in range(fps):
+        ok, frame = cap.read()
+        if not ok:
+            break
+        warmup_frames += 1
+        warmup_size = (frame.shape[1], frame.shape[0])
+    warmup_elapsed = time.monotonic() - warmup_start
+
+    measured_fps = warmup_frames / warmup_elapsed if warmup_elapsed > 0 else 0
+    encoding_fps = measured_fps if measured_fps >= 1 else reported_fps
+    encoding_fps = encoding_fps if encoding_fps and encoding_fps >= 1 else fps
+
+    print(
+        f"Camera timing: delivered {warmup_frames} frames in "
+        f"{warmup_elapsed:.3f}s ({encoding_fps:.2f} FPS)",
+        flush=True,
+    )
 
     writer = None
     segment_start = None
@@ -59,7 +82,7 @@ def record_segments(completed_queue, stop_event, output_dir=OUTPUT_DIR,
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         path = os.path.join(output_dir, f"driving_{stamp}.mp4")
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        video_writer = cv2.VideoWriter(path, fourcc, fps, actual_size)
+        video_writer = cv2.VideoWriter(path, fourcc, encoding_fps, actual_size)
         if not video_writer.isOpened():
             video_writer.release()
             raise RuntimeError(f"Could not create video file: {path}")
