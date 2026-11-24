@@ -25,13 +25,14 @@ exports.updatePaidStatus = async (id, isPaid) => {
 };
 
 exports.createTicket = async (input) => {
+    const suppliedRealtime = input?.inrealtime == null ? null : String(input.inrealtime).trim();
     const ticket = {
         user_id: input?.user_id == null ? null : Number(input.user_id),
         violation: input?.violation,
         street_loc: input?.street_loc ?? input?.street_location,
         price: Number(input?.price),
         is_paid: input?.is_paid == null ? 0 : Number(input.is_paid),
-        inrealtime: input?.inrealtime == null ? null : String(input.inrealtime),
+        inrealtime: suppliedRealtime || new Date().toISOString(),
     };
     if (ticket.user_id !== null && (!Number.isSafeInteger(ticket.user_id) || ticket.user_id <= 0)) {
         throw new Error("Invalid ticket: user_id must be a positive integer");
@@ -47,6 +48,9 @@ exports.createTicket = async (input) => {
     }
     if (!Number.isInteger(ticket.is_paid) || (ticket.is_paid !== 0 && ticket.is_paid !== 1)) {
         throw new Error("Invalid ticket: is_paid must be 0 or 1");
+    }
+    if (suppliedRealtime && Number.isNaN(Date.parse(suppliedRealtime))) {
+        throw new Error("Invalid ticket: inrealtime must be a valid timestamp");
     }
     return TicketRepo.insert(ticket);
 };

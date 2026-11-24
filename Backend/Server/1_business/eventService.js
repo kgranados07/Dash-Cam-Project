@@ -6,6 +6,7 @@ exports.getEventById = async (id) => {
 };
 
 exports.createEvent = async (input) => {
+    const suppliedRealtime = input?.inrealtime == null ? null : String(input.inrealtime).trim();
     const event = {
         user_id: input?.user_id == null ? null : Number(input.user_id),
         event_type: input?.event_type,
@@ -16,7 +17,7 @@ exports.createEvent = async (input) => {
         timestamp: input?.timestamp,
         timestamp_seconds: input?.timestamp_seconds == null ? null : Number(input.timestamp_seconds),
         frame: input?.frame == null ? null : Number(input.frame),
-        inrealtime: input?.inrealtime == null ? null : String(input.inrealtime),
+        inrealtime: suppliedRealtime || new Date().toISOString(),
     };
     if (event.user_id !== null && (!Number.isSafeInteger(event.user_id) || event.user_id <= 0)) throw new Error("Invalid event: user_id must be a positive integer");
     if (typeof event.event_type !== "string" || !event.event_type.trim()) throw new Error("Invalid event: event_type is required");
@@ -27,5 +28,6 @@ exports.createEvent = async (input) => {
     if (typeof event.timestamp !== "string" || !event.timestamp.trim()) throw new Error("Invalid event: timestamp is required");
     if (event.timestamp_seconds !== null && !Number.isFinite(event.timestamp_seconds)) throw new Error("Invalid event: timestamp_seconds must be numeric");
     if (event.frame !== null && (!Number.isInteger(event.frame) || event.frame < 0)) throw new Error("Invalid event: frame must be a non-negative integer");
+    if (suppliedRealtime && Number.isNaN(Date.parse(suppliedRealtime))) throw new Error("Invalid event: inrealtime must be a valid timestamp");
     return EventRepo.insert(event);
 };

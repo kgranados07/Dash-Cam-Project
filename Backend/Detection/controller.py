@@ -2,6 +2,7 @@ import json
 import os
 import queue
 import threading
+from datetime import datetime
 
 from record import record_segments
 from analyze import analyze_video
@@ -99,6 +100,7 @@ class DwellViolationTracker:
 
         if dwell_seconds >= threshold and not state["ticket_sent"]:
             state["ticket_sent"] = True
+            event.inrealtime = datetime.now().astimezone().isoformat(timespec="milliseconds")
             return submit_violation_ticket(violation, event, price)
 
         return None

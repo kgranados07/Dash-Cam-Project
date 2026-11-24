@@ -3,6 +3,7 @@ import json
 import os
 import urllib.error
 import urllib.request
+from datetime import datetime
 
 
 class Event:
@@ -50,7 +51,7 @@ class Event:
             self.timestamp = detection.get("timestamp")
             self.timestamp_seconds = detection.get("timestamp_seconds")
             self.frame = detection.get("frame")
-            self.inrealtime = detection.get("inrealtime")
+            self.inrealtime = detection.get("inrealtime") or datetime.now().astimezone().isoformat(timespec="milliseconds")
 
             if self.user_id is not None and (
                 isinstance(self.user_id, bool)

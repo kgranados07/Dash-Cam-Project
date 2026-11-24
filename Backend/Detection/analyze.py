@@ -2,7 +2,7 @@ import cv2
 import json
 import os
 import sys
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 
 def analyze_video(video_file, seen_codes=None, results_file="qr_results.json", deduplicate=True, fps=None):
@@ -46,7 +46,8 @@ def analyze_video(video_file, seen_codes=None, results_file="qr_results.json", d
                         "video": os.path.basename(video_file),
                         "frame": frame_number,
                         "timestamp_seconds": round(timestamp, 3),
-                        "timestamp": str(timedelta(seconds=timestamp))
+                        "timestamp": str(timedelta(seconds=timestamp)),
+                        "inrealtime": datetime.now().astimezone().isoformat(timespec="milliseconds")
                     }
                     new_detections.append(detection)
                     print(
