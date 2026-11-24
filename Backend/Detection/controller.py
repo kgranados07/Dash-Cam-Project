@@ -42,8 +42,70 @@ def submit_violation_ticket(violation, event, price, user_id=None):
     return post_ticket(ticket)
 
 
+class DwellViolationTracker:
+    """Track confirmed zone dwell time from repeated QR detections."""
+
+    def __init__(self, segment_seconds=SEGMENT_SECONDS):
+        self.segment_seconds = segment_seconds
+        self.segment_offsets = {}
+        self.active = {}
+
+    def process(self, detection, event):
+        normalized = "".join(
+            character for character in event.event_type.lower()
+            if character.isalnum()
+        )
+
+        if normalized not in ("parking", "parkingviolation", "stop", "stopsign", "stopsignviolation"):
+            return None
+
+        video = detection.get("video") or "unknown"
+        if video not in self.segment_offsets:
+            self.segment_offsets[video] = len(self.segment_offsets) * self.segment_seconds
+
+        local_timestamp = float(detection.get("timestamp_seconds") or 0)
+        absolute_timestamp = self.segment_offsets[video] + local_timestamp
+        key = (normalized, event.street_location)
+        state = self.active.get(key)
+
+        if state is None:
+            state = {
+                "started": absolute_timestamp,
+                "last": absolute_timestamp,
+                "ticket_sent": False,
+            }
+            self.active[key] = state
+        else:
+            gap = absolute_timestamp - state["last"]
+            if gap > 2.0:
+                state = {
+                    "started": absolute_timestamp,
+                    "last": absolute_timestamp,
+                    "ticket_sent": False,
+                }
+                self.active[key] = state
+
+        state["last"] = absolute_timestamp
+        dwell_seconds = state["last"] - state["started"]
+
+        if normalized in ("parking", "parkingviolation"):
+            violation = "Parking Violation"
+            price = TICKET_RULES["parking"][1]
+            threshold = PARKING_VIOLATION_SECONDS
+        else:
+            violation = "Stop Sign Violation"
+            price = TICKET_RULES["stop"][1]
+            threshold = STOP_SIGN_MINIMUM_SECONDS
+
+        if dwell_seconds >= threshold and not state["ticket_sent"]:
+            state["ticket_sent"] = True
+            return submit_violation_ticket(violation, event, price)
+
+        return None
+
+
 def submit_ticket_from_event(event):
-    """Create a ticket when event.event_type matches a configured violation."""
+    """Create a ticket for recognized event types without immediate dwell violations."""
     if not isinstance(event, Event):
         raise TypeError("event must be an Event")
 
@@ -67,7 +129,20 @@ def submit_ticket_from_event(event):
         )
         return None
 
-    return submit_violation_ticket(violation, event, price)
+    if normalized in ("parking", "parkingviolation"):
+        print(
+            "Parking ticket requires dwell tracking; "
+            f"threshold is {PARKING_VIOLATION_SECONDS:.0f} seconds.",
+            flush=True,
+        )
+        return None
+
+    print(
+        "Stop-sign ticket requires dwell tracking; "
+        f"threshold is {STOP_SIGN_MINIMUM_SECONDS:.0f} seconds.",
+        flush=True,
+    )
+    return None
 
 
 def main():
@@ -91,6 +166,7 @@ def main():
             print(f"Warning: could not read existing {RESULTS_FILE}; starting with an empty QR history.")
     seen_lock = threading.Lock()
     errors = queue.Queue()
+    dwell_tracker = DwellViolationTracker(segment_seconds=SEGMENT_SECONDS)
 
     def recording_worker():
         try:
@@ -141,7 +217,7 @@ def main():
                         result = post_event(event)
                         print(f"Event sent to server: {result}", flush=True)
 
-                        ticket = submit_ticket_from_event(event)
+                        ticket = dwell_tracker.process(detection, event)
                         if ticket is not None:
                             print(f"Ticket sent to server: {ticket}", flush=True)
                     except (ValueError, RuntimeError) as exc:
@@ -174,7 +250,7 @@ def main():
                             result = post_event(event)
                             print(f"Event sent to server: {result}", flush=True)
 
-                            ticket = submit_ticket_from_event(event)
+                            ticket = dwell_tracker.process(detection, event)
                             if ticket is not None:
                                 print(f"Ticket sent to server: {ticket}", flush=True)
                         except (ValueError, RuntimeError) as exc:
