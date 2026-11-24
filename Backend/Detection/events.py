@@ -88,7 +88,7 @@ def create_event(detection):
 
 
 def post_event(event: Event, api_url=None, timeout=5):
-    api_url = api_url or os.getenv("EVENT_API_URL", "http://localhost:3000/events")
+    api_url = api_url or os.getenv("EVENT_API_URL", "https://dash-cam-project.onrender.com/events")
     payload = event.to_dict() if isinstance(event, Event) else event
     body = json.dumps(payload).encode("utf-8")
     request = urllib.request.Request(

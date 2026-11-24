@@ -47,7 +47,7 @@ class Ticket:
 
 def post_ticket(ticket, api_url=None, timeout=5):
     """POST a confirmed violation to the Node server and return its response."""
-    api_url = api_url or os.getenv("TICKET_API_URL", "http://localhost:3000/tickets")
+    api_url = api_url or os.getenv("TICKET_API_URL", "https://dash-cam-project.onrender.com/tickets")
     payload = ticket.to_dict() if isinstance(ticket, Ticket) else ticket
     body = json.dumps(payload).encode("utf-8")
     request = urllib.request.Request(
