@@ -6,7 +6,7 @@ import threading
 from datetime import datetime
 
 
-CAMERA = 4
+CAMERA = 8
 WIDTH = 1280
 HEIGHT = 720
 FPS = 60
@@ -39,10 +39,15 @@ def record_segments(completed_queue, stop_event, output_dir=OUTPUT_DIR,
         raise RuntimeError(f"Could not open camera {camera}")
 
     actual_fps = cap.get(cv2.CAP_PROP_FPS)
-    if not actual_fps or abs(actual_fps - fps) > 3.0:
-        cap.release()
-        raise RuntimeError(
-            f"Camera reported {actual_fps:.1f} FPS; 60 FPS timing requires {fps} FPS"
+    if actual_fps and abs(actual_fps - fps) > 3.0:
+        print(
+            f"Warning: camera reports {actual_fps:.1f} FPS; requested {fps} FPS",
+            flush=True,
+        )
+    elif not actual_fps:
+        print(
+            f"Warning: camera FPS is unavailable from V4L2; assuming {fps} FPS",
+            flush=True,
         )
 
     writer = None

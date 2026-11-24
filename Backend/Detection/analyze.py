@@ -5,7 +5,7 @@ import sys
 from datetime import timedelta
 
 
-def analyze_video(video_file, seen_codes=None, results_file="qr_results.json", deduplicate=True):
+def analyze_video(video_file, seen_codes=None, results_file="qr_results.json", deduplicate=True, fps=None):
     """
     Analyze a completed video without displaying any windows.
     Each QR payload is recorded only once for the entire controller session
@@ -20,9 +20,9 @@ def analyze_video(video_file, seen_codes=None, results_file="qr_results.json", d
         return []
 
     qr = cv2.QRCodeDetector()
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    if not fps or fps <= 0:
-        fps = 30.0
+    reported_fps = cap.get(cv2.CAP_PROP_FPS)
+    if fps is None:
+        fps = reported_fps if reported_fps and reported_fps > 0 else 30.0
 
     frame_number = 0
     new_detections = []

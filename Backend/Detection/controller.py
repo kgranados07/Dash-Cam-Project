@@ -132,7 +132,8 @@ def main():
                 # independently while this call runs.
                 with seen_lock:
                     detections = analyze_video(
-                        item, seen_codes, RESULTS_FILE, deduplicate=False
+                        item, seen_codes, RESULTS_FILE,
+                        deduplicate=False, fps=FPS
                     )
                 for detection in detections:
                     try:
@@ -164,7 +165,8 @@ def main():
                 try:
                     with seen_lock:
                         detections = analyze_video(
-                            item, seen_codes, RESULTS_FILE, deduplicate=False
+                            item, seen_codes, RESULTS_FILE,
+                            deduplicate=False, fps=FPS
                         )
                     for detection in detections:
                         try:
